@@ -30,6 +30,12 @@ option(USE_SYSTEM_SOPHUS "Use system pre-installed Sophus" ON)
 option(USE_SYSTEM_TSL-ROBIN-MAP "Use system pre-installed tsl_robin" ON)
 option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" ON)
 
+option(USE_TBB "Use tbb" ON)
+
+if (USE_TBB)
+add_definitions(-DUSE_TBB)
+endif()
+
 # ccache setup
 if(USE_CCACHE)
   find_program(CCACHE_PATH ccache)

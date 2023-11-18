@@ -74,12 +74,13 @@ std::vector<Eigen::Vector3d> Preprocess(const std::vector<Eigen::Vector3d> &fram
 std::vector<Eigen::Vector3d> CorrectKITTIScan(const std::vector<Eigen::Vector3d> &frame) {
     constexpr double VERTICAL_ANGLE_OFFSET = (0.205 * M_PI) / 180.0;
     std::vector<Eigen::Vector3d> corrected_frame(frame.size());
-    tbb::parallel_for(size_t(0), frame.size(), [&](size_t i) {
+    // tbb::parallel_for(size_t(0), frame.size(), [&](size_t i) {
+    for (size_t i = 0; i < frame.size(); i++) {
         const auto &pt = frame[i];
         const Eigen::Vector3d rotationVector = pt.cross(Eigen::Vector3d(0., 0., 1.));
         corrected_frame[i] =
             Eigen::AngleAxisd(VERTICAL_ANGLE_OFFSET, rotationVector.normalized()) * pt;
-    });
+    };
     return corrected_frame;
 }
 }  // namespace kiss_icp

@@ -23,6 +23,8 @@
 
 #include "KissICP.hpp"
 
+#include <mrpt/system/CTimeLogger.h>
+
 #include <Eigen/Core>
 #include <tuple>
 #include <vector>
@@ -31,6 +33,10 @@
 #include "kiss_icp/core/Preprocessing.hpp"
 #include "kiss_icp/core/Registration.hpp"
 #include "kiss_icp/core/VoxelHashMap.hpp"
+
+namespace {
+mrpt::system::CTimeLogger profiler;
+}
 
 namespace kiss_icp::pipeline {
 
@@ -53,13 +59,25 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
 }
 
 KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vector3d> &frame) {
+    mrpt::system::CTimeLoggerEntry tle(profiler, "RegisterFrame");
+
     // Preprocess the input cloud
+    mrpt::system::CTimeLoggerEntry tle1(profiler, "RegisterFrame.preprocess");
+
     const auto &cropped_frame = Preprocess(frame, config_.max_range, config_.min_range);
 
+    tle1.stop();
+
     // Voxelize
+    mrpt::system::CTimeLoggerEntry tle2(profiler, "RegisterFrame.voxelize");
+
     const auto &[source, frame_downsample] = Voxelize(cropped_frame);
 
+    tle2.stop();
+
     // Get motion prediction and adaptive_threshold
+    mrpt::system::CTimeLoggerEntry tle3(profiler, "RegisterFrame.predict");
+
     const double sigma = GetAdaptiveThreshold();
 
     // Compute initial_guess for ICP
@@ -67,15 +85,28 @@ KissICP::Vector3dVectorTuple KissICP::RegisterFrame(const std::vector<Eigen::Vec
     const auto last_pose = !poses_.empty() ? poses_.back() : Sophus::SE3d();
     const auto initial_guess = last_pose * prediction;
 
+    tle3.stop();
+
     // Run icp
+    mrpt::system::CTimeLoggerEntry tle4(profiler, "RegisterFrame.register");
+
     const Sophus::SE3d new_pose = kiss_icp::RegisterFrame(source,         //
                                                           local_map_,     //
                                                           initial_guess,  //
                                                           3.0 * sigma,    //
                                                           sigma / 3.0);
+
+    tle4.stop();
+
     const auto model_deviation = initial_guess.inverse() * new_pose;
     adaptive_threshold_.UpdateModelDeviation(model_deviation);
+
+    mrpt::system::CTimeLoggerEntry tle5(profiler, "RegisterFrame.updateLocalMap");
+
     local_map_.Update(frame_downsample, new_pose);
+
+    tle5.stop();
+
     poses_.push_back(new_pose);
     return {frame, source};
 }

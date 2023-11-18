@@ -21,8 +21,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+find_package(mrpt-system REQUIRED)
+
 add_library(pipeline STATIC)
 add_library(kiss_icp::pipeline ALIAS pipeline)
 target_sources(pipeline PRIVATE KissICP.cpp)
 target_link_libraries(pipeline PUBLIC kiss_icp::core)
+target_link_libraries(pipeline PRIVATE mrpt::system)
 set_global_target_properties(pipeline)

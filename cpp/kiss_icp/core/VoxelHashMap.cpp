@@ -90,6 +90,7 @@ VoxelHashMap::Vector3dVectorTuple VoxelHashMap::GetCorrespondences(
 
         return closest_neighbor;
     };
+#if USE_TBB
     using points_iterator = std::vector<Eigen::Vector3d>::const_iterator;
     const auto [source, target] = tbb::parallel_reduce(
         // Range
@@ -121,8 +122,21 @@ VoxelHashMap::Vector3dVectorTuple VoxelHashMap::GetCorrespondences(
                        std::make_move_iterator(tgtp.begin()), std::make_move_iterator(tgtp.end()));
             return a;
         });
-
     return std::make_tuple(source, target);
+#else
+    std::vector<Eigen::Vector3d> source;
+    std::vector<Eigen::Vector3d> target;
+    source.reserve(points.size());
+    target.reserve(points.size());
+    for (const auto &point : points) {
+        Eigen::Vector3d closest_neighboors = GetClosestNeighboor(point);
+        if ((closest_neighboors - point).norm() < max_correspondance_distance) {
+            source.emplace_back(point);
+            target.emplace_back(closest_neighboors);
+        }
+    }
+    return std::make_tuple(source, target);
+#endif
 }
 
 std::vector<Eigen::Vector3d> VoxelHashMap::Pointcloud() const {
